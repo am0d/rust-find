@@ -139,11 +139,11 @@ fn main() {
             dump_json(dc);
         }
         let mut i=0;
-        let lib_html_path = if matches.opt_present("x") {
-            matches.opt_str("x").unwrap() + "/"
+        let lib_html_path = Path::new(if matches.opt_present("x") {
+            matches.opt_str("x").unwrap()
         } else {
             ~""
-        };
+        });
         if matches.opt_present("f") {
             while i<matches.free.len() {
                 let mode=if matches.opt_present("g"){SDM_GeditCmd} else {SDM_Source};
@@ -165,7 +165,7 @@ fn main() {
         }
         if matches.opt_present("r") {
             println!("Writing .rfx ast nodes/cross-crate-map:-");
-            write_source_as_html_and_rfx(dc,lib_html_path, &html_options, false);
+            write_source_as_html_and_rfx(dc, &lib_html_path, &html_options, false);
             println!("Writing .rfx .. done");
             done=true;
         }
@@ -173,7 +173,7 @@ fn main() {
         // Dump as html..
         if matches.opt_present("w") || !(done) {
             println!("Creating HTML pages from source & .rfx:-");
-            write_source_as_html_and_rfx(dc,lib_html_path, &html_options, true);
+            write_source_as_html_and_rfx(dc, &lib_html_path, &html_options, true);
             println!("Creating HTML pages from source.. done");
         }
 	} else {
@@ -297,20 +297,24 @@ fn debug_test(dc:&RFindCtx) {
 
 
 
-pub fn write_source_as_html_and_rfx(dc:&RFindCtx,lib_html_path:&str,opts: &rust2html::Options, write_html:bool) {
+pub fn write_source_as_html_and_rfx(dc:&RFindCtx, lib_html_path:&Path, opts: &rust2html::Options, write_html: bool) {
 
-    let mut xcm:~CrossCrateMap=~HashMap::new();
+    let mut xcm: ~CrossCrateMap = ~HashMap::new();
     dc.tycx.cstore.iter_crate_data(|i,md| {
-//      dump!(i, md.name,md.data.len(),md.cnum);
+        //dump!(i, md.name,md.data.len(),md.cnum);
         println!("loading cross crate data {} {}", i, md.name);
-        let xcm_sub=crosscratemap::read_cross_crate_map(dc, i as int, lib_html_path + "lib"+md.name+&"/lib.rfx",lib_html_path);
-        for (k,v) in xcm_sub.iter() {xcm.insert(*k,(*v).clone());}
+        let xcm_sub=crosscratemap::read_cross_crate_map(dc, i as int, 
+                                                        "lib" + md.name + "/lib.rfx", 
+                                                        lib_html_path);
+        for (k,v) in xcm_sub.iter() {
+            xcm.insert(*k, (*v).clone());
+        }
     });
 
-    let (info_map,def_map,jump_map) = make_jdm(dc);
-    crosscratemap::write_cross_crate_map(dc,lib_html_path, &info_map,def_map,jump_map);
+    let (info_map, def_map, jump_map) = make_jdm(dc);
+    crosscratemap::write_cross_crate_map(dc, &opts.output_dir, &info_map, def_map, jump_map);
     if write_html {
-        rust2html::write_source_as_html_sub(dc,&info_map,jump_map,xcm,lib_html_path,opts);
+        rust2html::write_source_as_html_sub(dc, &info_map, jump_map, xcm, lib_html_path, opts);
     }
 }
 

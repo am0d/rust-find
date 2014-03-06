@@ -144,17 +144,17 @@ pub unsafe fn fileSize(fp:*FILE)->Size_t {
 }
 
 
-pub fn fileLoad(filename:&str)->~[u8] {
-    unsafe {
-        // TODO - should do with patter match null, fp?
-        let fp= fileOpen(filename,"rb");
-        if fp==0 as *FILE {
-            printStr(&("could not read "+filename)); ~[]
-        }
-        else
-        {   let buffer=fileReadBytes(fp,fileSize(fp));
-            fclose(fp);
-            buffer
+pub fn fileLoad<'a>(file_path: &Path, show_error: bool) -> Option<~str> {
+    let mut file = File::open(file_path);
+    match file.read_to_str() {
+        Ok(s) => {
+            Some(s)
+        },
+        Err(e) => {
+            if show_error {
+                println!("Error loading {}: {}", file_path.display(), e);
+            }
+            None
         }
     }
 }

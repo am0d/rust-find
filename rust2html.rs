@@ -51,7 +51,7 @@ impl Options {
 
 //nim:&FNodeInfoMap,jdm:&JumpToDefMap, jrm:&JumpToRefMap
 pub fn make_html(dc: &RFindCtx, fm: &codemap::FileMap, nmaps: &NodeMaps,
-                 xcm: &CrossCrateMap, fln: &FileLineNodes, lib_path: &str, 
+                 xcm: &CrossCrateMap, fln: &FileLineNodes, lib_path: &Path, 
                  out_file: &Path, options: &Options) -> ~str {
     // todo - Rust2HtmlCtx { fm,nim,jdm,jrm } .. cleanup common intermediates
 
@@ -116,7 +116,9 @@ pub fn make_html(dc: &RFindCtx, fm: &codemap::FileMap, nmaps: &NodeMaps,
     doc.doc
 }
 
-pub fn write_source_as_html_sub(dc:&RFindCtx, nim:&FNodeInfoMap, jdm:&JumpToDefMap,xcm:&CrossCrateMap,lib_path:&str, options: &Options) {
+pub fn write_source_as_html_sub(dc: &RFindCtx, nim: &FNodeInfoMap, 
+                                jdm: &JumpToDefMap, xcm: &CrossCrateMap,
+                                lib_path: &Path, options: &Options) {
 
     let npl=NodesPerLinePerFile::new(dc,nim);
 
@@ -132,15 +134,21 @@ pub fn write_source_as_html_sub(dc:&RFindCtx, nim:&FNodeInfoMap, jdm:&JumpToDefM
     let files=&dc.sess.codemap.files;
     let files = files.borrow();
     let files = files.get();
+    let root_file = Path::new(files.get(0).name.clone());
     for (fi,fm) in files.iter().enumerate() {
         if is_valid_filename(fm.name) {
-            let html_name = options.output_dir.join(Path::new(make_html_name(fm.name)));
+            let file_name = Path::new(make_html_name(fm.name))
+                .path_relative_from(&root_file.dir_path()).unwrap();
+            let html_name = options.output_dir.join(&file_name);
             println!("generating {}: {}..", fi.to_str(), html_name.display());
             let doc_str=make_html(dc, *fm, &nmaps,xcm, &npl.file[fi] , lib_path,
                                   &html_name, options);
             iou::fileSaveStr(doc_str, &html_name);
         }
     }
+
+    // copy all resources to the output folder
+    iou::copy_folder(&Path::new("resources/"), &options.output_dir);
 }
 
 fn is_valid_filename(f:&str) ->bool{
@@ -158,7 +166,7 @@ fn write_head(doc:&mut htmlwriter::HtmlWriter, out_file: &Path, options: &Option
                         .path_relative_from(&out_file.dir_path())
                         .unwrap_or(Path::new(""));
     fn write_css_link (doc: &mut htmlwriter::HtmlWriter, css_rel_path: &Path, stylesheet_name: &str) {
-        let path = match css_rel_path.with_filename(stylesheet_name).as_str() {
+        let path = match css_rel_path.join(stylesheet_name).as_str() {
             Some(s) => s,
             None => stylesheet_name
         }.to_owned();
@@ -168,7 +176,7 @@ fn write_head(doc:&mut htmlwriter::HtmlWriter, out_file: &Path, options: &Option
     doc.begin_tag("head");
     write_css_link(doc, css_rel_path, "css/shCore.css");
     write_css_link(doc, css_rel_path, "css/shThemeDefault.css");
-    write_css_link(doc, css_rel_path, "sourcestyle.css");
+    write_css_link(doc, css_rel_path, "css/sourcestyle.css");
     doc.end_tag();
 }
 
@@ -408,7 +416,10 @@ static link_to_refs:bool    =true;
 static link_debug:bool      =true;
 
 
-fn write_line_with_links(dst:&mut SourceCodeWriter<htmlwriter::HtmlWriter>,dc:&RFindCtx,fm:&codemap::FileMap,lib_path:&str, nmaps:&NodeMaps,xcm:&CrossCrateMap, line:&str, nodes:&[ast::NodeId]) {
+fn write_line_with_links(dst: &mut SourceCodeWriter<htmlwriter::HtmlWriter>,
+                         dc: &RFindCtx, fm: &codemap::FileMap, 
+                         lib_path: &Path, nmaps: &NodeMaps,
+                         xcm: &CrossCrateMap, line: &str, nodes: &[ast::NodeId]) {
     // todo ... BREAK THIS FUNCTION UP!!!!
     // and there is a load of messy cut paste too.
 
@@ -588,11 +599,12 @@ fn write_line_with_links(dst:&mut SourceCodeWriter<htmlwriter::HtmlWriter>,dc:&R
             x+=1;
         }
     }
-    let resolver=|x|resolve_link(x,dc,fm,lib_path, nmaps,xcm);
+    let resolver=|x|resolve_link(x,dc,fm, lib_path, nmaps,xcm);
     write_line_attr_links(dst,line,color,link, resolver );
 }
 
-fn resolve_link(link:i64, dc:&RFindCtx,fm:&codemap::FileMap,lib_path:&str, nmaps:&NodeMaps,xcm:&CrossCrateMap)->~str {
+fn resolve_link(link: i64, dc: &RFindCtx,fm: &codemap::FileMap, lib_path: &Path, 
+                nmaps: &NodeMaps, xcm: &CrossCrateMap) -> ~str {
 /*
     if link_debug==false {
         if link!=no_link {
@@ -648,7 +660,7 @@ fn resolve_link(link:i64, dc:&RFindCtx,fm:&codemap::FileMap,lib_path:&str, nmaps
                 },
                 Some(a)=>{
     //                          "../gplsrc/rust/src/"+a.fname+".html"+
-                    make_html_name_reloc(a.fname,fm.name,lib_path)+
+                    make_html_name_reloc(a.fname,fm.name, lib_path)+
                         "#n"+def_node.to_str()
                 }
             }
@@ -835,7 +847,7 @@ impl<'a> Draw for  (&'a Window,&'a str) {
 */
 
 
-fn write_references(doc:&mut htmlwriter::HtmlWriter,dc:&RFindCtx, fm:&codemap::FileMap, _:&str,  nmaps:&NodeMaps, _: &[~[ast::NodeId]]) {
+fn write_references(doc:&mut htmlwriter::HtmlWriter,dc:&RFindCtx, fm:&codemap::FileMap, _out_path: &Path,  nmaps:&NodeMaps, _: &[~[ast::NodeId]]) {
 
 
     doc.begin_tag_ext("div",[(~"class",~"refblock")]);
@@ -1065,7 +1077,9 @@ fn count_chars_in(f:&str, x:char)->uint{
 }
 
 
-fn make_html_name_reloc(f:&str, origin:&str, reloc:&str)->~str {
+fn make_html_name_reloc(f:&str, origin:&str, reloc: &Path)->~str {
+    // TODO rewrite this function using path_relative_from()
+    let reloc = reloc.as_str().unwrap();
     let mut acc=~"";
     if reloc.len()>0 {
         acc=reloc.to_owned();
@@ -1079,7 +1093,7 @@ fn make_html_name_reloc(f:&str, origin:&str, reloc:&str)->~str {
     make_html_name(acc)
 }
 fn make_html_name_rel(f:&str, origin:&str)->~str {
-    make_html_name_reloc(f,origin,"")
+    make_html_name_reloc(f,origin, &Path::new(""))
 }
 
 

@@ -1,4 +1,3 @@
-use std::io::println;
 use rf_common::*;
 use syntax::ast;
 use syntax::codemap::Pos;
@@ -27,18 +26,25 @@ pub struct CrossCrateMapItem {
 pub type CrossCrateMap = HashMap<ast::DefId,CrossCrateMapItem>;
 
 
-pub fn read_cross_crate_map(_:&RFindCtx, crate_num:int, crate_name:&str,lib_path:&str)->~CrossCrateMap {
-    let mut raw_bytes=ioutil::fileLoad(crate_name);
-    if raw_bytes.len()==0 {
-        println("loading lib crosscratemap "+lib_path+"/"+crate_name);
-        raw_bytes=ioutil::fileLoad(lib_path+"/"+crate_name);
+pub fn read_cross_crate_map(_:&RFindCtx, crate_num:int, crate_name:&str, lib_path: &Path)->~CrossCrateMap {
+    println!("loading lib crosscratemap {}/{}", lib_path.display(), crate_name);
+    fn load_cross_crate_map(path: &Path) -> ~str {
+        match ioutil::fileLoad(path, true) {
+            Some(s) => s,
+            None => ~"" // give up :(
+        }
     }
-    let rfx=str::from_utf8(raw_bytes);
-    println("loaded cratemap "+rfx.get_ref().len().to_str()+" bytes"+" as crate "+crate_num.to_str());
+
+    let rfx = match ioutil::fileLoad(&Path::new(crate_name), false) {
+        None => load_cross_crate_map(&lib_path.join(crate_name)),
+        Some(ref s) if s.len() == 0 => load_cross_crate_map(&lib_path.join(crate_name)),
+        Some(s) => s
+    };
+    println!("loaded cratemap {} bytes as crate {}", rfx.len(), crate_num);
 //  for &x in raw_bytes.iter() { rfx.push_char(x as char); }
 
     let mut xcm=~HashMap::new();
-    for s in rfx.get_ref().lines() {
+    for s in rfx.lines() {
 //      println(s.to_str());
         let toks=s.split('\t').to_owned_vec();
         if toks.len()>=6 {
@@ -79,13 +85,13 @@ pub fn read_cross_crate_map(_:&RFindCtx, crate_num:int, crate_name:&str,lib_path
         }
     }
     //dump!(xcm);
-    println("from cratemap "+rfx.get_ref().len().to_str()+" bytes");
     xcm
 }
 
 
 
-pub fn write_cross_crate_map(dc:&RFindCtx, _:&str,nim:&FNodeInfoMap, _:&HashMap<ast::NodeId, ast::DefId>, jdm:&JumpToDefMap) {
+pub fn write_cross_crate_map(dc: &RFindCtx, out_path: &Path, nim: &FNodeInfoMap, 
+                             _: &HashMap<ast::NodeId, ast::DefId>, jdm: &JumpToDefMap) {
     // write inter-crate node map
     let crate_rel_path_name= dc.sess.codemap.files.borrow();
     let crate_rel_path_name = Path::new(crate_rel_path_name.get().get(0).name.as_slice());
@@ -93,7 +99,7 @@ pub fn write_cross_crate_map(dc:&RFindCtx, _:&str,nim:&FNodeInfoMap, _:&HashMap<
 
     let curr_crate_name_only = crate_rel_path_name.filestem_str().unwrap_or("");
     println!("Writing rustfind cross-crate link info for {}", curr_crate_name_only);
-    let out_path = crate_rel_path_name.with_extension("rfx");
+    let out_path = out_path.join(crate_rel_path_name.with_extension("rfx"));
     let out = ioutil::file_create_with_dirs(&out_path).map(|out| {
         let mut out_file = out;
         // todo - idents to a seperate block, they're rare.

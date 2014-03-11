@@ -46,6 +46,12 @@ impl ZIndexFilePos {
     }
 }
 
+impl Eq for ZIndexFilePos {
+    fn eq (&self, other: &ZIndexFilePos) -> bool {
+        self.to_scalar() == other.to_scalar()
+    }
+}
+
 impl Ord for ZIndexFilePos {
     // todo: as fixed width bignum? or int64 from int32 components?
     fn lt(&self, other: &ZIndexFilePos) -> bool {

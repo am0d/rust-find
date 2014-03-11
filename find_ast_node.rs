@@ -462,13 +462,13 @@ impl AstNodeAccessors for ast::Ty {
 impl AstNodeAccessors for ast::ViewItem_ {
     fn get_id(&self)->Option<ast::NodeId> {
         match *self {
-            ast::ViewItemExternMod(_,_,node_id)=>Some(node_id),
+            ast::ViewItemExternCrate(_,_,node_id)=>Some(node_id),
             ast::ViewItemUse(_)=>None
         }
     }
     fn get_ident(&self)->Option<ast::Ident> {
         match *self {
-            ast::ViewItemExternMod(ident,_,_)=>Some(ident),
+            ast::ViewItemExternCrate(ident,_,_)=>Some(ident),
             ast::ViewItemUse(_)=>None
         }
     }

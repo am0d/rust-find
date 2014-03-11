@@ -54,7 +54,7 @@ pub fn lookup_def_node_of_node(dc:&RFindCtx,node:&AstNode, nodeinfomap:&FNodeInf
                         match trait_method_def_ids.find(&mp.trait_id) {
                             None=>{},
                             Some(method_def_ids)=>{
-                                return Some(method_def_ids[mp.method_num])
+                                return Some(*method_def_ids.get(mp.method_num))
                             }
                         }
                     }

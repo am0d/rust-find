@@ -49,13 +49,17 @@ endif
 
 define RUST_TARGET_LIB
 rust_lib$(1): rustfind rust_lib_pre $$(patsubst %,rust_lib%,$$(filter-out native:%,$$(DEPS_$(1))))
-	@echo "Generating HTML for lib$(1)"
+	@echo "***************************************************************"
+	@echo " Generating HTML for lib$(1)"
 	@export CFG_VERSION=0; export CFG_PREFIX=0;export CFG_RUSTLIBDIR=0;export CFG_COMPILER=0;export CFG_LIBDIR_RELATIVE=0; \
-		$(RUST_FIND) $(RUSTSRC)/lib$(1)/lib.rs $(RF_LIBS) -o $(RUSTSRC)/html/lib$(1) -x $(RUSTSRC)
+		$(RUST_FIND) $(RUSTSRC)/lib$(1)/lib.rs $(RF_LIBS) -o $(RUSTSRC)/html/lib$(1) -x $(RUSTSRC)/html
+	@echo "***************************************************************"
 rust_lib$(1)_nodeps: rustfind rust_lib_pre
-	@echo "Generating HTML for lib$(1)"
+	@echo "***************************************************************"
+	@echo " Generating HTML for lib$(1)"
 	@export CFG_VERSION=0; export CFG_PREFIX=0;export CFG_RUSTLIBDIR=0;export CFG_COMPILER=0;export CFG_LIBDIR_RELATIVE=0; \
-		$(RUST_FIND) $(RUSTSRC)/lib$(1)/lib.rs $(RF_LIBS) -o $(RUSTSRC)/html/lib$(1) -x $(RUSTSRC)
+		$(RUST_FIND) $(RUSTSRC)/lib$(1)/lib.rs $(RF_LIBS) -o $(RUSTSRC)/html/lib$(1) -x $(RUSTSRC)/html
+	@echo "***************************************************************"
 endef
 
 $(foreach crate,$(CRATES),$(eval $(call RUST_TARGET_LIB,$(crate))))

@@ -11,7 +11,7 @@ pub use std::vec::from_elem;
 pub use std::num::Zero;
 use std::io::{BufferedReader, IoResult};
 
-pub type Size_t=u64;    // todo - we're not sure this should be u64
+pub type size_t=u64;    // todo - we're not sure this should be u64
                         // as the libc stuff seems to want.
                         // should it be uint?
 
@@ -117,18 +117,18 @@ pub unsafe fn fileWrite<T>(fp:*FILE, array:&[T]) {
 
 
 pub unsafe fn fileWriteStruct<T>(fp:*FILE, s:&T) {
-    fwrite(as_void_ptr(s),size_of::<T>() as Size_t,1,fp);
+    fwrite(as_void_ptr(s),size_of::<T>() as size_t,1,fp);
 }
 
 
-pub unsafe fn fileRead<T:Zero+Clone>(fp:*FILE,numElems:Size_t)->~[T] {
+pub unsafe fn fileRead<T:Zero+Clone>(fp:*FILE,numElems:size_t)->~[T] {
     let buffer=from_elem(numElems as uint, Zero::zero());
-    fread(as_mut_void_ptr(&buffer[0]),numElems,size_of::<T>() as Size_t,fp);
+    fread(as_mut_void_ptr(&buffer[0]),numElems,size_of::<T>() as size_t,fp);
     buffer
 }
 
 
-pub unsafe fn fileReadBytes(fp:*FILE,numBytes:Size_t)->~[u8] {
+pub unsafe fn fileReadBytes(fp:*FILE,numBytes:size_t)->~[u8] {
     // todo - simply express as the above..
     let buffer=from_elem(numBytes as uint,0 as u8);
     fread(as_mut_void_ptr(&buffer[0]),numBytes,1,fp);
@@ -136,11 +136,11 @@ pub unsafe fn fileReadBytes(fp:*FILE,numBytes:Size_t)->~[u8] {
 }
 
 
-pub unsafe fn fileSize(fp:*FILE)->Size_t {
+pub unsafe fn fileSize(fp:*FILE)->size_t {
     fseek(fp,0,SEEK_END);
     let pos=ftell(fp);
     fseek(fp,0,SEEK_SET);
-    pos as Size_t
+    pos as size_t
 }
 
 
@@ -162,11 +162,11 @@ pub fn fileLoad<'a>(file_path: &Path, show_error: bool) -> Option<~str> {
 
 pub unsafe fn fileWriteRange<T>(fp:*FILE, array:&[T],start:uint,end:uint) {
     printStr(&sizeofArray(array));
-    fwrite(as_void_ptr(&array[start]),sizeofArrayElem(array)*(end-start) as Size_t,1,fp);
+    fwrite(as_void_ptr(&array[start]),sizeofArrayElem(array)*(end-start) as size_t,1,fp);
 }
 
-pub fn sizeofArray<T>(a:&[T])->Size_t { (size_of::<T>() * a.len()) as Size_t }
-pub fn sizeofArrayElem<T>(_:&[T])->Size_t { size_of::<T>() as Size_t }
+pub fn sizeofArray<T>(a:&[T])->size_t { (size_of::<T>() * a.len()) as size_t }
+pub fn sizeofArrayElem<T>(_:&[T])->size_t { size_of::<T>() as size_t }
 
 
 pub fn fileSaveArray<T>(buffer:&[T],filename:&str) {

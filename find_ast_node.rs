@@ -311,7 +311,7 @@ impl AstNode {
         match *self {
             astnode_ty(ty)=>
                 match ty.node {
-                    ast::TyPath(_,_,NodeId)=>Some(NodeId),
+                    ast::TyPath(_,_,nodeId)=>Some(nodeId),
                     _ => self.get_id()
                 },
             _ => self.get_id()

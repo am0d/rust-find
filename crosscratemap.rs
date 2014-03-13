@@ -93,14 +93,15 @@ pub fn read_cross_crate_map(_:&RFindCtx, crate_num:int, crate_name:&str, lib_pat
 pub fn write_cross_crate_map(dc: &RFindCtx, out_path: &Path, nim: &FNodeInfoMap, 
                              _: &HashMap<ast::NodeId, ast::DefId>, jdm: &JumpToDefMap) {
     // write inter-crate node map
-    let crate_rel_path_name= dc.sess.codemap.files.borrow();
+    let crate_rel_path_name = dc.sess.codemap.files.borrow();
     let crate_rel_path_name = Path::new(crate_rel_path_name.get().get(0).name.as_slice());
     let new_format:bool=true;
 
     let curr_crate_name_only = crate_rel_path_name.filestem_str().unwrap_or("");
-    println!("Writing rustfind cross-crate link info for {}", curr_crate_name_only);
-    let out_path = out_path.join(crate_rel_path_name.with_extension("rfx"));
-    let out = ioutil::file_create_with_dirs(&out_path).map(|out| {
+    let out_file = out_path.join(curr_crate_name_only).with_extension("rfx");
+
+    println!("Writing rustfind cross-crate link info for {} ({})", curr_crate_name_only, out_file.display());
+    let out = ioutil::file_create_with_dirs(&out_file).map(|out| {
         let mut out_file = out;
         // todo - idents to a seperate block, they're rare.
         for (k,ni) in nim.iter() {

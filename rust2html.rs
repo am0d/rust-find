@@ -59,12 +59,12 @@ pub fn make_html(dc: &RFindCtx, fm: &codemap::FileMap, nmaps: &NodeMaps,
     write_head(&mut doc, out_file, options);
 
     let hash=get_str_hash(fm.name);
-//  let bg=(~[~"383838",~"34383c",~"3c3834",~"383c34",~"343c38",~"38343c",~"3a343a",
-//          ~"3a343a",~"36363a",~"363a36",~"3a3636",~"3a3a34",~"3a333a",~"343a3a",~"343a3c",~"343838"])[hash&15];
+    //let bg=(~[~"383838",~"34383c",~"3c3834",~"383c34",~"343c38",~"38343c",~"3a343a",
+    //      ~"3a343a",~"36363a",~"363a36",~"3a3636",~"3a3a34",~"3a333a",~"343a3a",~"343a3c",~"343838"])[hash&15];
     // write the doc lines..
     doc.begin_tag("body");//,&[(~"style",~"background-color:#"+bg+";")]);
-    doc.begin_tag("div");//,&[(~"style",~"background-color:#"+bg+";")]);
-    doc.begin_tag("bg"+(hash&15).to_str());
+    doc.begin_tag_ext("div", &[(~"class",format!("c{}", (hash & 15)))]);
+    //doc.begin_tag("bg"+(hash&15).to_str());
     doc.begin_tag("maintext");
     let fstart = fm.start_pos;
     let max_digits=num_digits(fm.lines.get().len());
@@ -109,7 +109,7 @@ pub fn make_html(dc: &RFindCtx, fm: &codemap::FileMap, nmaps: &NodeMaps,
     }
 
     doc.end_tag();
-    doc.end_tag();
+    //doc.end_tag();
     doc.end_tag();
     doc.end_tag();
 
@@ -296,36 +296,36 @@ impl NodesPerLinePerFile {
 }
 pub fn node_color_index(ni:&FNodeInfo)->int {
     // TODO - map this a bit more intelligently..
-    match ni.kind {
-        ~"fn"=>1,
-        ~"add"|~"sub"|~"mul"|~"div"|~"assign"|~"eq"|~"le"|~"gt"|~"ge"|~"ne"|~"binop"|~"assign_op"
-        |~"bitand"|~"bitxor"|~"bitor"|~"shl"|~"shr"|~"not"|~"neg"|~"box"|~"uniq"|~"deref"|~"addr_of"
+    match ni.kind.as_slice() {
+        "fn"=>1,
+        "add"|"sub"|"mul"|"div"|"assign"|"eq"|"le"|"gt"|"ge"|"ne"|"binop"|"assign_op"
+        |"bitand"|"bitxor"|"bitor"|"shl"|"shr"|"not"|"neg"|"box"|"uniq"|"deref"|"addr_of"
             =>5,
-        ~"de"=>3,
-        ~"type_param"=>7,
-        ~"ty"=>8,
-        ~"struct_field"|~"field"=>24,
-        ~"path"=>26,
-        ~"call"=>27,
-        ~"variant"=>28,
-        ~"method_call"=>10,
-        ~"lit"=>12,
-        ~"stmt"=>13,
-        ~"mod"=>38,
-        ~"local"=>16,
-        ~"pat"=>20,
-        ~"block"|~"blk"|~"fn_block"=>22,
-        ~"method"|~"type_method"=>18,
-        ~"tup"=>14,
-        ~"arm"=>11,
-        ~"index"=>13,
-        ~"vstore"=>16,
-        ~"mac"=>10,
-        ~"struct"=>31,
-        ~"trait"=>32,
-        ~"impl"=>33,
-        ~"enum"=>34,
-        ~"keyword"|~"while"|~"match"|~"loop"|~"do"|~"cast"|~"if"|~"return"|~"unsafe"|~"extern"|~"crate"|~"as"|~"in"|~"for"=>21,
+        "de"=>3,
+        "type_param"=>7,
+        "ty"=>8,
+        "struct_field"|"field"=>24,
+        "path"=>26,
+        "call"=>27,
+        "variant"=>28,
+        "method_call"=>10,
+        "lit"=>12,
+        "stmt"=>13,
+        "mod"=>38,
+        "local"=>16,
+        "pat"=>20,
+        "block"|"blk"|"fn_block"=>22,
+        "method"|"type_method"=>18,
+        "tup"=>14,
+        "arm"=>11,
+        "index"=>13,
+        "vstore"=>16,
+        "mac"=>10,
+        "struct"=>31,
+        "trait"=>32,
+        "impl"=>33,
+        "enum"=>34,
+        "keyword"|"while"|"match"|"loop"|"do"|"cast"|"if"|"return"|"unsafe"|"extern"|"crate"|"as"|"in"|"for"=>21,
 
         _ =>1
     }
@@ -690,7 +690,7 @@ fn write_line_attr_links(dst:&mut SourceCodeWriter<htmlwriter::HtmlWriter>,text_
             curr_col = color[x];
             curr_link=links[x];
             if curr_col !=no_color {
-                dst.doc.begin_tag(color_index_to_tag(curr_col));
+                dst.doc.begin_tag_ext("span", &[(~"class", color_index_to_tag(curr_col))]);
             }
             if curr_link !=no_link {
                 dst.doc.begin_tag_link( resolve_link(links[x]) );
@@ -1070,27 +1070,17 @@ fn make_html_name(f: &str) -> ~str {
     f + ".html"
 }
 
-fn count_chars_in(f:&str, x:char)->uint{
-    let mut n=0;
-    for c in f.chars() { if c==x {n+=1} }
-    n
-}
-
-
 fn make_html_name_reloc(f:&str, origin:&str, reloc: &Path)->~str {
-    // TODO rewrite this function using path_relative_from()
-    let reloc = reloc.as_str().unwrap();
-    let mut acc=~"";
-    if reloc.len()>0 {
-        acc=reloc.to_owned();
-        if acc.chars().last().unwrap()!='/' { acc.push_char('/');}
-    }else {
-        for _ in range(0,count_chars_in(origin,'/')) {
-            acc.push_str("../");
-        }
-    }
-    acc.push_str(f);
-    make_html_name(acc)
+    let mut acc = match Path::new(f).path_relative_from(&Path::new(origin)) {
+        Some(s) => {
+            reloc.join(s)
+        },
+        None => Path::new(reloc)
+    };
+
+    acc.set_filename(f);
+    acc.set_extension("rs.html");
+    acc.as_str().unwrap().to_owned()
 }
 fn make_html_name_rel(f:&str, origin:&str)->~str {
     make_html_name_reloc(f,origin, &Path::new(""))
